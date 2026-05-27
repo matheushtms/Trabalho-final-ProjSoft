@@ -56,31 +56,449 @@ Foram criados diagramas de sequência para mostrar como o sistema funciona em si
 
 
 ## Diagrama de Casos de Uso
-<img width="420" height="545" alt="image" src="https://github.com/user-attachments/assets/a44fe893-fdc6-4d03-9a0a-6aa4a0c8626e" />
+
+📄 [Código-Fonte PlantUML](./diagrams/use_case.puml)
+
+```mermaid
+graph LR
+    classDef actor fill:#3F51B5,stroke:#303F9F,stroke-width:2px,color:#fff;
+    classDef usecase fill:#FAFAFA,stroke:#3F51B5,stroke-width:1px,color:#303F9F;
+    
+    Cliente:::actor
+    Funcionario["Funcionário"]:::actor
+    Admin["Administrador"]:::actor
+    
+    subgraph BB["BeautyBook - Sistema de Salão de Beleza"]
+        Login["Fazer Login"]:::usecase
+        CadCli["Cadastrar Cliente"]:::usecase
+        Agendar["Agendar Serviço"]:::usecase
+        Cancelar["Cancelar Agendamento"]:::usecase
+        Confirmar["Confirmar Atendimento"]:::usecase
+        Pagamento["Registrar Pagamento"]:::usecase
+        Relatorio["Gerar Relatório"]:::usecase
+        Validar["Validar Credenciais"]:::usecase
+        Notificar["Notificar por E-mail/SMS"]:::usecase
+    end
+    
+    Cliente --> Login
+    Cliente --> CadCli
+    Cliente --> Agendar
+    Cliente --> Cancelar
+    
+    Funcionario --> Login
+    Funcionario --> Agendar
+    Funcionario --> Cancelar
+    Funcionario --> Confirmar
+    Funcionario --> Pagamento
+    
+    Admin --> Login
+    Admin --> CadCli
+    Admin --> Confirmar
+    Admin --> Pagamento
+    Admin --> Relatorio
+    
+    Login -.->|&lt;&lt;include&gt;&gt;| Validar
+    Agendar -.->|&lt;&lt;extend&gt;&gt;| Notificar
+    Cancelar -.->|&lt;&lt;extend&gt;&gt;| Notificar
+```
 
 ## Diagrama de Sequência — Fazer login
-<img width="508" height="410" alt="image" src="https://github.com/user-attachments/assets/197cdeb3-6ce3-4094-a6a1-dbe54692375f" />
+
+📄 [Código-Fonte PlantUML](./diagrams/seq_login.puml)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Usuario as Usuário
+    participant Front as Interface de Login (Frontend)
+    participant Auth as AuthController (Backend)
+    participant DB as Banco de Dados
+    
+    Usuario->>Front: Digita email e senha e clica em "Entrar"
+    activate Front
+    Front->>Auth: POST /api/auth/login (email, senha)
+    activate Auth
+    Auth->>DB: Buscar usuário por email
+    activate DB
+    DB-->>Auth: Retorna dados (hash da senha)
+    deactivate DB
+    
+    Note over Auth: Validar credenciais (verificar hash)
+    
+    alt Credenciais Válidas
+        Note over Auth: Gerar Token JWT
+        Auth-->>Front: 200 OK (token, dadosUsuario)
+        Front->>Usuario: Redireciona para o Dashboard (Home)
+    else Credenciais Inválidas
+        Auth-->>Front: 401 Unauthorized (Erro)
+        deactivate Auth
+        Front->>Usuario: Exibe mensagem de erro
+        deactivate Front
+    end
+```
 
 ## Diagrama de Sequência — Agendar serviço
-<img width="592" height="457" alt="image" src="https://github.com/user-attachments/assets/651f6cd4-ba38-4839-8af1-517462debd85" />
+
+📄 [Código-Fonte PlantUML](./diagrams/seq_agendar.puml)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Cliente as Cliente
+    participant Front as Interface de Agendamento (Frontend)
+    participant Backend as AgendamentoController (Backend)
+    participant DB as Banco de Dados
+    participant Notif as NotificationService
+    
+    Cliente->>Front: Acessa a página de agendamento
+    activate Front
+    Front->>Backend: GET /api/servicos e GET /api/funcionarios
+    activate Backend
+    Backend->>DB: Consultar serviços e funcionários ativos
+    activate DB
+    DB-->>Backend: Lista de serviços e funcionários
+    deactivate DB
+    Backend-->>Front: Retorna serviços e funcionários (200 OK)
+    deactivate Backend
+    
+    Cliente->>Front: Seleciona Serviço, Funcionário e Data/Hora
+    Front->>Backend: POST /api/agendamentos/validar (dados)
+    activate Backend
+    Backend->>DB: Verificar conflitos de horário
+    activate DB
+    DB-->>Backend: 0 conflitos
+    deactivate DB
+    
+    alt Horário Disponível
+        Backend-->>Front: Horário Disponível (200 OK)
+        Cliente->>Front: Confirma o agendamento
+        Front->>Backend: POST /api/agendamentos (criar)
+        Backend->>DB: INSERT INTO agendamentos (status = 'PENDENTE')
+        activate DB
+        DB-->>Backend: Retorna ID
+        deactivate DB
+        
+        Backend->>Notif: Enviar email/SMS de confirmação
+        activate Notif
+        Notif-->>Backend: Confirma envio
+        deactivate Notif
+        
+        Backend-->>Front: 201 Created (Sucesso)
+        Front->>Cliente: Exibe mensagem de sucesso
+    else Horário Indisponível
+        Backend-->>Front: Horário Indisponível (409 Conflict)
+        deactivate Backend
+        Front->>Cliente: Exibe mensagem de erro: "Horário ocupado"
+        deactivate Front
+    end
+```
 
 ## Diagrama de Sequência — Cancelar agendamento
-<img width="524" height="444" alt="image" src="https://github.com/user-attachments/assets/bb8f1306-b3d5-488f-a242-3f3de278acc8" />
+
+📄 [Código-Fonte PlantUML](./diagrams/seq_cancelar.puml)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Actor as Cliente / Funcionário
+    participant Front as Interface de Agendamentos (Frontend)
+    participant Backend as AgendamentoController (Backend)
+    participant DB as Banco de Dados
+    participant Notif as NotificationService
+    
+    Actor->>Front: Clica em "Cancelar Agendamento"
+    activate Front
+    Front->>Actor: Solicita confirmação de cancelamento
+    Actor->>Front: Confirma cancelamento
+    Front->>Backend: POST /api/agendamentos/{id}/cancelar
+    activate Backend
+    
+    Backend->>DB: Buscar detalhes do agendamento por ID
+    activate DB
+    DB-->>Backend: Retorna dados (dataHora, status, ids)
+    deactivate DB
+    
+    Note over Backend: Validar regra de antecedência (> 2 horas)
+    
+    alt Antecedência Válida (>= 2 horas)
+        Backend->>DB: UPDATE agendamentos SET status = 'CANCELADO'
+        activate DB
+        DB-->>Backend: Confirmação de atualização
+        deactivate DB
+        Backend->>Notif: Enviar notificação de cancelamento
+        activate Notif
+        Notif-->>Backend: Confirmação de envio
+        deactivate Notif
+        Backend-->>Front: 200 OK (Cancelamento confirmado)
+        Front->>Actor: Exibe sucesso e atualiza a lista
+    else Antecedência Inválida (< 2 horas)
+        Backend-->>Front: 400 Bad Request (Prazo não cumprido)
+        deactivate Backend
+        Front->>Actor: Exibe erro: "Cancelamento indisponível"
+        deactivate Front
+    end
+```
 
 ## Diagrama de Classes
-<img width="429" height="494" alt="image" src="https://github.com/user-attachments/assets/4704e1c8-c158-4dc7-9b0f-6748ed3779dd" />
+
+📄 [Código-Fonte PlantUML](./diagrams/classes.puml)
+
+```mermaid
+classDiagram
+    class Usuario {
+        <<abstract>>
+        -Int id
+        -String nome
+        -String email
+        -String senha
+        -String telefone
+        +login(email, senha) Boolean
+    }
+    class Cliente {
+        -Date dataCadastro
+        +cadastrar() Boolean
+        +solicitarAgendamento(servico, dataHora) Agendamento
+        +solicitarCancelamento(agendamento) Boolean
+    }
+    class Funcionario {
+        -String especialidade
+        -String horarioTrabalho
+        +confirmarAgendamento(agendamento) Boolean
+        +registrarAtendimento(agendamento) Boolean
+    }
+    class Administrador {
+        -String nivelAcesso
+        +cadastrarFuncionario(func) Boolean
+        +cadastrarServico(servico) Boolean
+        +gerarRelatorio(dataInicio, dataFim) Relatorio
+    }
+    class Servico {
+        -Int id
+        -String nome
+        -String descricao
+        -Double preco
+        -Int duracaoMinutos
+        +cadastrar() Boolean
+        +atualizarPreco(novoPreco) Boolean
+    }
+    class Agendamento {
+        -Int id
+        -DateTime dataHora
+        -StatusAgendamento status
+        +alterarStatus(novoStatus)
+        +associarPagamento(pagamento)
+    }
+    class Pagamento {
+        -Int id
+        -Double valor
+        -DateTime dataHora
+        -StatusPagamento status
+        -MetodoPagamento metodo
+        +processarPagamento() Boolean
+        +estornarPagamento() Boolean
+    }
+    class Relatorio {
+        -Int id
+        -Date dataGeracao
+        -String tipo
+        -String conteudo
+        +exportarPDF() Byte[]
+    }
+    
+    class StatusAgendamento {
+        <<enumeration>>
+        PENDENTE
+        CONFIRMADO
+        EM_ATENDIMENTO
+        FINALIZADO
+        CANCELADO
+    }
+    class StatusPagamento {
+        <<enumeration>>
+        PENDENTE
+        PAGO
+        ESTORNADO
+        FALHADO
+    }
+    class MetodoPagamento {
+        <<enumeration>>
+        DINHEIRO
+        CARTAO_CREDITO
+        CARTAO_DEBITO
+        PIX
+    }
+    
+    Usuario <|-- Cliente
+    Usuario <|-- Funcionario
+    Usuario <|-- Administrador
+    
+    Cliente "1" -- "0..*" Agendamento : realiza
+    Funcionario "1" -- "0..*" Agendamento : executa
+    Servico "1" -- "0..*" Agendamento : compoe
+    Agendamento "1" *-- "0..1" Pagamento : possui
+    Administrador ..> Relatorio : gera
+    
+    Agendamento ..> StatusAgendamento
+    Pagamento ..> StatusPagamento
+    Pagamento ..> MetodoPagamento
+```
 
 ## Diagrama de Componentes
-<img width="704" height="467" alt="image" src="https://github.com/user-attachments/assets/d71463db-9714-42a0-b9b8-0b39ddef9285" />
+
+📄 [Código-Fonte PlantUML](./diagrams/componentes.puml)
+
+```mermaid
+graph TD
+    subgraph UI["Interface de Usuário (Frontend SPA)"]
+        SPA["Interface Web (SPA)"]
+    end
+    
+    subgraph Core["Backend API (BeautyBook Core)"]
+        AuthCtrl["Controller de Autenticação"]
+        AgendaCtrl["Controller de Agendamentos"]
+        CliCtrl["Controller de Clientes"]
+        PagCtrl["Controller de Pagamentos"]
+        RelCtrl["Controller de Relatórios"]
+        
+        AgendaMod["Módulo de Agendamentos"]
+        CliMod["Módulo de Clientes"]
+        PagMod["Módulo de Pagamentos"]
+        RelMod["Módulo de Relatórios"]
+        NotifService["Serviço de Notificações"]
+    end
+    
+    subgraph Ext["Serviços Externos"]
+        ExtPay["Gateway de Pagamento (MercadoPago/Stripe)"]
+        ExtNotif["Serviço de SMS/E-mail (Twilio/SendGrid)"]
+    end
+    
+    subgraph DB["Banco de Dados (PostgreSQL)"]
+        DBSchema[("Tabelas / Esquema Relacional")]
+    end
+    
+    SPA -->|HTTP/REST| AuthCtrl
+    SPA -->|HTTP/REST| AgendaCtrl
+    SPA -->|HTTP/REST| CliCtrl
+    SPA -->|HTTP/REST| PagCtrl
+    SPA -->|HTTP/REST| RelCtrl
+    
+    AgendaCtrl --> AgendaMod
+    CliCtrl --> CliMod
+    PagCtrl --> PagMod
+    RelCtrl --> RelMod
+    
+    AgendaMod --> NotifService
+    AgendaMod --> CliMod
+    PagMod --> AgendaMod
+    
+    PagMod -->|HTTPS API| ExtPay
+    NotifService -->|HTTPS API| ExtNotif
+    
+    AuthCtrl --> DBSchema
+    AgendaMod --> DBSchema
+    CliMod --> DBSchema
+    PagMod --> DBSchema
+    RelMod --> DBSchema
+    
+    classDef layer fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef component fill:#FAFAFA,stroke:#3F51B5,stroke-width:1px,color:#212121;
+    classDef database fill:#E0F2F1,stroke:#009688,stroke-width:1px,color:#212121;
+    
+    SPA:::component
+    AuthCtrl:::component; AgendaCtrl:::component; CliCtrl:::component; PagCtrl:::component; RelCtrl:::component;
+    AgendaMod:::component; CliMod:::component; PagMod:::component; RelMod:::component; NotifService:::component;
+    ExtPay:::component; ExtNotif:::component;
+    DBSchema:::database
+```
 
 ## Diagrama de Implantação
-<img width="434" height="397" alt="image" src="https://github.com/user-attachments/assets/5599c3f8-4a4b-4d06-961b-aaebb33dc987" />
+
+📄 [Código-Fonte PlantUML](./diagrams/implantacao.puml)
+
+```mermaid
+graph TD
+    subgraph UserDevice["Dispositivo do Usuário (PC / Mobile)"]
+        subgraph Browser["Navegador Web"]
+            SPA["SPA BeautyBook (HTML5/React)"]
+        end
+    end
+    
+    subgraph HostingFront["Hospedagem Frontend (Vercel / Netlify)"]
+        Static["Arquivos Estáticos SPA"]
+    end
+    
+    subgraph CloudApp["Servidor de Aplicação (Render / AWS EC2)"]
+        subgraph Runtime["Runtime (Node.js / JVM)"]
+            API["BeautyBook API (.js / .jar)"]
+        end
+    end
+    
+    subgraph CloudDB["Banco de Dados Gerenciado"]
+        DBMS[("PostgreSQL Database")]
+    end
+    
+    UserDevice -->|1: GET / (HTTPS)| HostingFront
+    SPA -->|2: REST Request (HTTPS - Porta 443)| API
+    API -->|3: JDBC/SQL (Porta 5432)| DBMS
+    
+    classDef node fill:#FAFAFA,stroke:#3F51B5,stroke-width:2px;
+    classDef dbNode fill:#E0F2F1,stroke:#009688,stroke-width:2px;
+    classDef art fill:#E8EAF6,stroke:#303F9F,stroke-width:1px;
+    
+    UserDevice:::node; HostingFront:::node; CloudApp:::node; CloudDB:::dbNode;
+    SPA:::art; API:::art; DBMS:::dbNode
+```
 
 ## Diagrama de Estados — Agendamento
-<img width="542" height="656" alt="image" src="https://github.com/user-attachments/assets/3694b6d6-93be-4e73-aad9-9d5580c8ac99" />
+
+📄 [Código-Fonte PlantUML](./diagrams/estados.puml)
+
+```mermaid
+stateDiagram-v2
+    [*] --> Pendente : solicitarAgendamento()
+    
+    Pendente --> Confirmado : confirmarAgendamento()
+    Pendente --> Cancelado : solicitarCancelamento()
+    
+    Confirmado --> EmAtendimento : registrarAtendimento()
+    Confirmado --> Cancelado : solicitarCancelamento()\n[antecedência >= 2h]
+    
+    EmAtendimento --> Finalizado : registrarConclusao()
+    
+    Finalizado --> [*]
+    Cancelado --> [*]
+    
+    note right of Pendente : entry: gerar registro pendente\nexit: notificar funcionário
+    note right of Confirmado : entry: bloquear horário\nexit: enviar lembrete 2h antes
+    note right of EmAtendimento : entry: registrar início do serviço\nexit: registrar fim do serviço
+    note right of Finalizado : entry: gerar cobrança de pagamento
+    note right of Cancelado : entry: liberar horário e notificar partes
+```
 
 ## Diagrama de Comunicação
-<img width="592" height="204" alt="image" src="https://github.com/user-attachments/assets/c62a54f2-1521-4217-85d1-cb3f792eb3fa" />
+
+📄 [Código-Fonte PlantUML](./diagrams/comunicacao.puml)
+
+```mermaid
+graph TD
+    Cliente["c : Cliente"]
+    View["view : InterfaceAgendamento"]
+    Ctrl["ctrl : AgendamentoController"]
+    Servico["s : Servico"]
+    Agendamento["a : Agendamento"]
+    Notif["notif : NotificationService"]
+    
+    Cliente -->|1: solicitarAgendamento()| View
+    View -->|2: criarAgendamento()| Ctrl
+    Ctrl -->|3: obterDetalhesServico()| Servico
+    Ctrl -->|4: <<create>> novo()| Agendamento
+    Ctrl -->|5: enviarConfirmacao()| Notif
+    Ctrl -->|6: exibirSucesso()| View
+    View -->|7: mostrarConfirmacao()| Cliente
+    
+    classDef obj fill:#FAFAFA,stroke:#3F51B5,stroke-width:1px,color:#212121;
+    Cliente:::obj; View:::obj; Ctrl:::obj; Servico:::obj; Agendamento:::obj; Notif:::obj;
+```
 
 ---
 
