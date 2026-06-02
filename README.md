@@ -19,7 +19,7 @@
 | Nome | Data | Razões para Mudança | Versão |
 | :--- | :--- | :--- | :--- |
 | Matheus Soares | 2026-06-02 | Estrutura inicial do documento de modelagem do sistema. | v1.0 |
-| Antigravity AI & Matheus Soares | 2026-06-02 | Reestruturação acadêmica, detalhamento de requisitos, contratos de operação e modelo de dados. | v1.1 |
+| Matheus Soares | 2026-06-02 | Reestruturação acadêmica, detalhamento de requisitos, contratos de operação e modelo de dados. | v1.1 |
 
 ---
 
