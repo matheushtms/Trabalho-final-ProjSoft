@@ -305,3 +305,6 @@ Para realizar a ponte entre as classes de projeto orientadas a objetos (Seção 
     *   **Um-para-Um (`@OneToOne` / `hasOne`)**: A associação entre `Agendamento` e `Pagamento` é declarada como bidirecional de cardinalidade 1:1, com a restrição de unicidade (`UNIQUE`) imposta sobre `pagamentos(agendamento_id)`.
 3.  **Mapeamento de Tipos Complexos (Enums)**:
     Campos como `status` do agendamento e `metodo_pagto` / `status_pagto` do pagamento são modelados na aplicação como Enums fortemente tipados. No mapeamento ORM, estes campos são salvos como `VARCHAR` (representação textual do Enum), garantindo maior clareza sem perda de consistência ao persistir ou analisar os dados diretamente no banco.
+
+    documento: [Doc trabalho final.pdf](https://github.com/user-attachments/files/28528800/Doc.trabalho.final.pdf)
+
