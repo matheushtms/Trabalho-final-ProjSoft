@@ -187,16 +187,18 @@ Os diagramas de sequência de projeto representam a realização detalhada dos c
 O diagrama de comunicação (anteriormente conhecido como diagrama de colaboração) foca na organização dos objetos que participam de uma interação. Ele exibe os vínculos estruturais e as mensagens numeradas trocadas entre os componentes do sistema.
 
 #### Diagrama de Comunicação de Objetos
-<img width="1046" height="282" alt="image" src="https://github.com/user-attachments/assets/0028dabe-65ea-4a9c-a5fc-34b699e8e092" />
+
+<img width="525" height="273" alt="image" src="https://github.com/user-attachments/assets/4ddab217-c5ae-4caf-b80f-a7cd00afc3b5" />
+
+
 
 ---
 
 ### 3.6 Diagramas de Estados
 
-O diagrama de estados descreve o comportamento dinâmico de uma entidade específica do sistema (a classe `Agendamento`), mostrando as transições de estado permitidas a partir de eventos específicos ao longo de seu ciclo de vida.
-
 #### Diagrama de Estados do Agendamento
-<img width="916" height="656" alt="image" src="https://github.com/user-attachments/assets/68cfa431-07b6-498d-ad9d-d7c59d972aa8" />
+<img width="1097" height="195" alt="image" src="https://github.com/user-attachments/assets/dafa1d27-a91c-45e4-8e04-c1d1852b8c88" />
+
 
 ---
 
